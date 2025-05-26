@@ -1,0 +1,25 @@
+
+{
+  "appId": "com.yourname.game-wishlist",
+  "productName": "Game Wishlist",
+  "directories": {
+    "output": "dist-electron"
+  },
+  "files": [
+    "dist/**/*",
+    "electron/**/*",
+    "node_modules/**/*"
+  ],
+  "mac": {
+    "icon": "public/favicon.ico",
+    "category": "public.app-category.entertainment"
+  },
+  "win": {
+    "icon": "public/favicon.ico",
+    "target": "nsis"
+  },
+  "linux": {
+    "icon": "public/favicon.ico",
+    "target": "AppImage"
+  }
+}

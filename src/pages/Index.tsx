@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Plus, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -110,7 +109,7 @@ const Index = () => {
     });
   };
 
-  const saveAsHTML = () => {
+  const saveAsHTML = async () => {
     const htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
@@ -237,20 +236,42 @@ const Index = () => {
 </body>
 </html>`;
 
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'game-wishlist.html';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // Check if running in Electron
+    if (window.electronAPI) {
+      try {
+        const result = await window.electronAPI.saveHTMLFile(htmlContent, 'game-wishlist.html');
+        if (result.success) {
+          toast({
+            title: "Wishlist Saved",
+            description: `Your game wishlist has been saved to ${result.path}!`,
+          });
+        } else if (!result.cancelled) {
+          throw new Error(result.error || 'Failed to save file');
+        }
+      } catch (error) {
+        toast({
+          title: "Save Failed",
+          description: "Could not save the file. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } else {
+      // Fallback for web version
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'game-wishlist.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
 
-    toast({
-      title: "Wishlist Saved",
-      description: "Your game wishlist has been saved as HTML file!",
-    });
+      toast({
+        title: "Wishlist Saved",
+        description: "Your game wishlist has been saved as HTML file!",
+      });
+    }
   };
 
   return (
