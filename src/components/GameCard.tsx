@@ -16,11 +16,13 @@ export const GameCard: React.FC<GameCardProps> = ({ game, onEdit, onRemove }) =>
     <Card className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/15 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl">
       <CardContent className="p-0">
         <div className="relative group">
-          <img
-            src={game.thumbnail}
-            alt={game.title}
-            className="w-full h-48 object-cover rounded-t-lg"
-          />
+          <div className="w-full h-48 overflow-hidden rounded-t-lg">
+            <img
+              src={game.thumbnail}
+              alt={game.title}
+              className="w-full h-full object-cover"
+            />
+          </div>
           <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2">
             <Button
               onClick={onEdit}

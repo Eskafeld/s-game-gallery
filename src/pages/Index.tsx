@@ -116,7 +116,7 @@ const Index = () => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Wishlist</title>
+    <title>Game Wishlist - Static Export</title>
     <style>
         * {
             margin: 0;
@@ -151,6 +151,15 @@ const Index = () => {
             font-size: 1.2rem;
             opacity: 0.9;
         }
+        .export-notice {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 30px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
         .games-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -160,38 +169,48 @@ const Index = () => {
         .game-card {
             background: rgba(255, 255, 255, 0.1);
             border-radius: 15px;
-            padding: 20px;
+            padding: 0;
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
             transition: transform 0.3s ease;
+            overflow: hidden;
         }
         .game-card:hover {
             transform: translateY(-5px);
         }
-        .game-thumbnail {
+        .game-thumbnail-container {
             width: 100%;
             height: 200px;
+            overflow: hidden;
+        }
+        .game-thumbnail {
+            width: 100%;
+            height: 100%;
             object-fit: cover;
-            border-radius: 10px;
-            margin-bottom: 15px;
+        }
+        .game-content {
+            padding: 20px;
         }
         .game-title {
             font-size: 1.3rem;
             font-weight: bold;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
         }
         .game-genre {
-            color: #a0a0a0;
+            color: #c084fc;
             font-size: 0.9rem;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
         }
         .game-description {
+            color: #d1d5db;
             font-size: 0.95rem;
             line-height: 1.5;
             margin-bottom: 15px;
         }
         .steam-link {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
             background: #1e40af;
             color: white;
             padding: 8px 16px;
@@ -199,6 +218,8 @@ const Index = () => {
             text-decoration: none;
             font-size: 0.9rem;
             transition: background 0.3s ease;
+            width: 100%;
+            justify-content: center;
         }
         .steam-link:hover {
             background: #1d4ed8;
@@ -206,6 +227,12 @@ const Index = () => {
         .icon {
             width: 40px;
             height: 40px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            opacity: 0.7;
         }
     </style>
 </head>
@@ -221,16 +248,36 @@ const Index = () => {
             <p class="subtitle">Discover your next gaming adventure</p>
         </div>
         
+        <div class="export-notice">
+            <strong>📋 Static Export</strong> - This is a read-only snapshot of your game wishlist exported on ${new Date().toLocaleDateString()}. 
+            To add or edit games, please return to the live application.
+        </div>
+        
         <div class="games-grid">
             ${games.map(game => `
                 <div class="game-card">
-                    <img src="${game.thumbnail}" alt="${game.title}" class="game-thumbnail">
-                    <h3 class="game-title">${game.title}</h3>
-                    <p class="game-genre">${game.genre}</p>
-                    <p class="game-description">${game.description}</p>
-                    ${game.steamUrl ? `<a href="${game.steamUrl}" class="steam-link">View on Steam</a>` : ''}
+                    <div class="game-thumbnail-container">
+                        <img src="${game.thumbnail}" alt="${game.title}" class="game-thumbnail">
+                    </div>
+                    <div class="game-content">
+                        <h3 class="game-title">${game.title}</h3>
+                        <p class="game-genre">${game.genre}</p>
+                        <p class="game-description">${game.description}</p>
+                        ${game.steamUrl ? `<a href="${game.steamUrl}" class="steam-link" target="_blank" rel="noopener noreferrer">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="m7 7 10 10-5 1z"></path>
+                                <path d="m13 17 6-6"></path>
+                                <path d="m7 7 6-6"></path>
+                            </svg>
+                            View on Steam
+                        </a>` : ''}
+                    </div>
                 </div>
             `).join('')}
+        </div>
+        
+        <div class="footer">
+            <p>Game Wishlist • ${games.length} games • Exported ${new Date().toLocaleString()}</p>
         </div>
     </div>
 </body>
