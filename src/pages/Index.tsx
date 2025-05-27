@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { Plus, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,7 @@ const initialGames: Game[] = [
     genre: 'Action, Survival',
     description: 'Survive against overwhelming odds in this intense zombie survival game. Build defenses, manage resources, and fight...',
     thumbnail: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=200&fit=crop',
-    steamUrl: 'https://store.steampowered.com/app/1000000/1_Million_Zombies/'
+    steamUrl: 'https://store.steampowered.com/app/2331220/'
   },
   {
     id: '2',
@@ -30,7 +31,7 @@ const initialGames: Game[] = [
     genre: 'Horror, Adventure',
     description: 'A survival horror adventure set in the post-apocalyptic world of A Quiet Place. Use stealth and silence to avoid deadly...',
     thumbnail: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400&h=200&fit=crop',
-    steamUrl: 'https://store.steampowered.com/app/1542810/A_Quiet_Place_The_Road_Ahead/'
+    steamUrl: 'https://store.steampowered.com/app/2233120/A_Quiet_Place_The_Road_Ahead/'
   },
   {
     id: '3',
@@ -38,7 +39,7 @@ const initialGames: Game[] = [
     genre: 'Action, Stealth',
     description: 'A tactical stealth action game featuring covert operations and strategic gameplay. Plan your missions carefully and...',
     thumbnail: 'https://images.unsplash.com/photo-1461749280684-dccba630e2f6?w=400&h=200&fit=crop',
-    steamUrl: 'https://store.steampowered.com/app/1234567/Abtos_Covert/'
+    steamUrl: 'https://store.steampowered.com/app/1694230/Abtos_Covert/'
   },
   {
     id: '4',
@@ -46,7 +47,7 @@ const initialGames: Game[] = [
     genre: 'Strategy, RTS',
     description: 'Experience ancient Greek warfare in this expansion to the legendary RTS. Command Greek city-states and forge your...',
     thumbnail: 'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=400&h=200&fit=crop',
-    steamUrl: 'https://store.steampowered.com/app/813780/Age_of_Empires_II_Definitive_Edition/'
+    steamUrl: 'https://store.steampowered.com/app/813780/'
   },
   {
     id: '5',
@@ -54,7 +55,7 @@ const initialGames: Game[] = [
     genre: 'Strategy, RTS',
     description: 'The complete Age of Empires IV experience with all DLCs included. Build civilizations, command armies, and shape the...',
     thumbnail: 'https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=400&h=200&fit=crop',
-    steamUrl: 'https://store.steampowered.com/app/1466860/Age_of_Empires_IV/'
+    steamUrl: 'https://store.steampowered.com/app/1466860/'
   },
   {
     id: '6',
@@ -62,7 +63,7 @@ const initialGames: Game[] = [
     genre: 'Strategy, Fantasy',
     description: 'Unleash primal magic in this fantasy strategy expansion. Command ancient beasts and harness the power of nature...',
     thumbnail: 'https://images.unsplash.com/photo-1500673922987-e212871fec22?w=400&h=200&fit=crop',
-    steamUrl: 'https://store.steampowered.com/app/1669000/Age_of_Wonders_4/'
+    steamUrl: 'https://store.steampowered.com/app/2401850/'
   }
 ];
 
