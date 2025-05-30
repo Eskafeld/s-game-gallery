@@ -14,27 +14,81 @@ export interface Game {
   description: string;
   thumbnail: string;
   steamUrl?: string;
+  steamData?: {
+    short_description?: string;
+    detailed_description?: string;
+    header_image?: string;
+    genres?: string;
+    developers?: string;
+    publishers?: string;
+    release_date?: string;
+    metacritic?: number;
+    price?: {
+      currency: string;
+      initial: string;
+      final: string;
+      discount_percent: number;
+    };
+  };
 }
 
 // Convert Supabase data to Game format
 const convertSupabaseToGame = (supabaseGame: any): Game => {
   return {
-    id: supabaseGame.Title, // Using title as ID since there's no separate ID field
+    id: supabaseGame.Title,
     title: supabaseGame.Title,
-    genre: 'Action, Adventure', // Default genre since not in database
+    genre: 'Action, Adventure',
     description: `Experience ${supabaseGame.Title} - an exciting gaming adventure that will keep you engaged for hours.`,
-    thumbnail: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=200&fit=crop', // Default thumbnail
+    thumbnail: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=200&fit=crop',
     steamUrl: supabaseGame.Link
   };
 };
 
+// Fetch Steam data for a game
+const fetchSteamData = async (steamUrl: string) => {
+  try {
+    const { data, error } = await supabase.functions.invoke('fetch-steam-data', {
+      body: { steamUrl }
+    });
+
+    if (error) {
+      console.error('Error fetching Steam data:', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error calling Steam API:', error);
+    return null;
+  }
+};
+
 const PublicGameCard: React.FC<{ game: Game }> = ({ game }) => {
+  const [steamData, setSteamData] = useState(game.steamData || null);
+  const [loadingsteamData, setLoadingSteamData] = useState(false);
+
+  useEffect(() => {
+    if (game.steamUrl && !steamData && !loadingsteamData) {
+      setLoadingSteamData(true);
+      fetchSteamData(game.steamUrl).then(data => {
+        if (data) {
+          setSteamData(data);
+        }
+        setLoadingSteamData(false);
+      });
+    }
+  }, [game.steamUrl, steamData, loadingsteamData]);
+
+  const displayImage = steamData?.header_image || game.thumbnail;
+  const displayGenre = steamData?.genres || game.genre;
+  const displayDescription = steamData?.short_description || game.description;
+
   return (
     <Card className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/15 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl">
       <CardContent className="p-0">
         <div className="w-full h-48 overflow-hidden rounded-t-lg">
           <img
-            src={game.thumbnail}
+            src={displayImage}
             alt={game.title}
             className="w-full h-full object-cover"
           />
@@ -42,10 +96,28 @@ const PublicGameCard: React.FC<{ game: Game }> = ({ game }) => {
         
         <div className="p-6">
           <h3 className="text-xl font-bold text-white mb-2">{game.title}</h3>
-          <p className="text-purple-200 text-sm mb-3">{game.genre}</p>
+          <p className="text-purple-200 text-sm mb-3">{displayGenre}</p>
           <p className="text-gray-300 text-sm leading-relaxed mb-4 line-clamp-3">
-            {game.description}
+            {displayDescription}
           </p>
+          
+          {steamData?.developers && (
+            <p className="text-gray-400 text-xs mb-2">
+              Developer: {steamData.developers}
+            </p>
+          )}
+          
+          {steamData?.release_date && (
+            <p className="text-gray-400 text-xs mb-2">
+              Release Date: {steamData.release_date}
+            </p>
+          )}
+          
+          {steamData?.metacritic && (
+            <p className="text-gray-400 text-xs mb-4">
+              Metacritic Score: {steamData.metacritic}/100
+            </p>
+          )}
           
           {game.steamUrl && (
             <Button
