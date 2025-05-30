@@ -23,6 +23,7 @@ serve(async (req) => {
     const { steamUrl } = await req.json();
     
     if (!steamUrl) {
+      console.error('No Steam URL provided');
       return new Response(JSON.stringify({ error: 'Steam URL is required' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -31,36 +32,89 @@ serve(async (req) => {
 
     const appId = extractSteamAppId(steamUrl);
     if (!appId) {
-      return new Response(JSON.stringify({ error: 'Invalid Steam URL' }), {
+      console.error('Invalid Steam URL format:', steamUrl);
+      return new Response(JSON.stringify({ error: 'Invalid Steam URL format' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    console.log(`Fetching Steam data for app ID: ${appId}`);
+    console.log(`Attempting to fetch Steam data for app ID: ${appId} from URL: ${steamUrl}`);
 
-    // Fetch game details from Steam Store API
-    const steamResponse = await fetch(`https://store.steampowered.com/api/appdetails?appids=${appId}&cc=us&l=en`);
+    // Use a more reliable Steam API endpoint with additional parameters
+    const steamApiUrl = `https://store.steampowered.com/api/appdetails?appids=${appId}&cc=us&l=english&v=1`;
+    console.log(`Steam API URL: ${steamApiUrl}`);
+
+    // Fetch game details from Steam Store API with custom headers
+    const steamResponse = await fetch(steamApiUrl, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; GameWishlistBot/1.0)',
+        'Accept': 'application/json',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+    });
     
+    console.log(`Steam API response status: ${steamResponse.status}`);
+    console.log(`Steam API response headers:`, Object.fromEntries(steamResponse.headers.entries()));
+
     if (!steamResponse.ok) {
-      throw new Error('Failed to fetch from Steam API');
+      console.error(`Steam API returned status ${steamResponse.status}: ${steamResponse.statusText}`);
+      const errorText = await steamResponse.text();
+      console.error('Steam API error response:', errorText);
+      
+      return new Response(JSON.stringify({ 
+        error: `Steam API returned status ${steamResponse.status}`,
+        details: errorText.substring(0, 200) // Limit error details
+      }), {
+        status: 502,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
-    const steamData = await steamResponse.json();
-    const gameData = steamData[appId];
+    const responseText = await steamResponse.text();
+    console.log(`Steam API response length: ${responseText.length} characters`);
+    console.log(`Steam API response preview: ${responseText.substring(0, 200)}...`);
 
-    if (!gameData || !gameData.success) {
-      return new Response(JSON.stringify({ error: 'Game not found on Steam' }), {
+    let steamData;
+    try {
+      steamData = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse Steam API response as JSON:', parseError);
+      console.error('Response text:', responseText.substring(0, 500));
+      return new Response(JSON.stringify({ error: 'Invalid JSON response from Steam API' }), {
+        status: 502,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log(`Steam data structure:`, Object.keys(steamData));
+    
+    const gameData = steamData[appId];
+    if (!gameData) {
+      console.error(`No data found for app ID ${appId} in Steam response`);
+      return new Response(JSON.stringify({ error: 'Game not found in Steam response' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    console.log(`Game data success status: ${gameData.success}`);
+    
+    if (!gameData.success) {
+      console.error(`Steam API reported failure for app ID ${appId}`);
+      return new Response(JSON.stringify({ error: 'Steam API reported this game as unavailable' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const game = gameData.data;
+    console.log(`Successfully parsed game data for: ${game.name}`);
     
-    // Extract relevant information
+    // Extract relevant information with fallbacks
     const gameInfo = {
-      name: game.name || '',
+      name: game.name || 'Unknown Game',
       short_description: game.short_description || '',
       detailed_description: game.detailed_description || '',
       header_image: game.header_image || '',
@@ -78,15 +132,21 @@ serve(async (req) => {
       } : null
     };
 
-    console.log(`Successfully fetched data for: ${gameInfo.name}`);
+    console.log(`Successfully processed Steam data for: ${gameInfo.name}`);
+    console.log(`Game info summary: ${gameInfo.genres}, ${gameInfo.developers}, released: ${gameInfo.release_date}`);
 
     return new Response(JSON.stringify(gameInfo), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Error in fetch-steam-data function:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    console.error('Unexpected error in fetch-steam-data function:', error);
+    console.error('Error stack:', error.stack);
+    
+    return new Response(JSON.stringify({ 
+      error: 'Internal server error', 
+      details: error.message 
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

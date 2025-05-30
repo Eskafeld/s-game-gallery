@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -44,40 +43,73 @@ const convertSupabaseToGame = (supabaseGame: any): Game => {
   };
 };
 
-// Fetch Steam data for a game
-const fetchSteamData = async (steamUrl: string) => {
+// Enhanced Steam data fetching with retry logic
+const fetchSteamData = async (steamUrl: string, retryCount = 0): Promise<any> => {
+  const maxRetries = 2;
+  
   try {
+    console.log(`Fetching Steam data for URL: ${steamUrl} (attempt ${retryCount + 1})`);
+    
     const { data, error } = await supabase.functions.invoke('fetch-steam-data', {
       body: { steamUrl }
     });
 
     if (error) {
-      console.error('Error fetching Steam data:', error);
-      return null;
+      console.error('Supabase function error:', error);
+      throw error;
     }
 
+    if (!data) {
+      throw new Error('No data returned from Steam API');
+    }
+
+    console.log('Successfully fetched Steam data:', data.name);
     return data;
   } catch (error) {
-    console.error('Error calling Steam API:', error);
+    console.error(`Steam API call failed (attempt ${retryCount + 1}):`, error);
+    
+    // Retry logic for transient errors
+    if (retryCount < maxRetries && error.message !== 'Invalid Steam URL format') {
+      console.log(`Retrying Steam API call for ${steamUrl} in 2 seconds...`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      return fetchSteamData(steamUrl, retryCount + 1);
+    }
+    
+    // Don't throw the error, return null instead to gracefully handle failures
+    console.warn(`Failed to fetch Steam data for ${steamUrl} after ${retryCount + 1} attempts`);
     return null;
   }
 };
 
 const PublicGameCard: React.FC<{ game: Game }> = ({ game }) => {
   const [steamData, setSteamData] = useState(game.steamData || null);
-  const [loadingsteamData, setLoadingSteamData] = useState(false);
+  const [loadingSteamData, setLoadingSteamData] = useState(false);
+  const [steamError, setSteamError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (game.steamUrl && !steamData && !loadingsteamData) {
+    if (game.steamUrl && !steamData && !loadingSteamData) {
       setLoadingSteamData(true);
-      fetchSteamData(game.steamUrl).then(data => {
-        if (data) {
-          setSteamData(data);
-        }
-        setLoadingSteamData(false);
-      });
+      setSteamError(null);
+      
+      fetchSteamData(game.steamUrl)
+        .then(data => {
+          if (data) {
+            setSteamData(data);
+            console.log(`Steam data loaded for ${game.title}`);
+          } else {
+            setSteamError('Unable to load Steam data');
+            console.warn(`No Steam data available for ${game.title}`);
+          }
+        })
+        .catch(error => {
+          setSteamError('Failed to load Steam data');
+          console.error(`Steam data error for ${game.title}:`, error);
+        })
+        .finally(() => {
+          setLoadingSteamData(false);
+        });
     }
-  }, [game.steamUrl, steamData, loadingsteamData]);
+  }, [game.steamUrl, steamData, loadingSteamData, game.title]);
 
   const displayImage = steamData?.header_image || game.thumbnail;
   const displayGenre = steamData?.genres || game.genre;
@@ -86,17 +118,33 @@ const PublicGameCard: React.FC<{ game: Game }> = ({ game }) => {
   return (
     <Card className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/15 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl">
       <CardContent className="p-0">
-        <div className="w-full h-48 overflow-hidden rounded-t-lg">
+        <div className="w-full h-48 overflow-hidden rounded-t-lg relative">
+          {loadingSteamData && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
+              <div className="text-white text-sm">Loading Steam data...</div>
+            </div>
+          )}
           <img
             src={displayImage}
             alt={game.title}
             className="w-full h-full object-cover"
+            onError={(e) => {
+              console.warn(`Image failed to load for ${game.title}, using fallback`);
+              e.currentTarget.src = game.thumbnail;
+            }}
           />
         </div>
         
         <div className="p-6">
           <h3 className="text-xl font-bold text-white mb-2">{game.title}</h3>
           <p className="text-purple-200 text-sm mb-3">{displayGenre}</p>
+          
+          {steamError && (
+            <p className="text-yellow-400 text-xs mb-2">
+              ⚠️ {steamError}
+            </p>
+          )}
+          
           <p className="text-gray-300 text-sm leading-relaxed mb-4 line-clamp-3">
             {displayDescription}
           </p>
