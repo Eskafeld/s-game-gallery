@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -5,6 +6,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 
 export interface Game {
   id: string;
@@ -18,10 +28,7 @@ export interface Game {
     detailed_description?: string;
     header_image?: string;
     genres?: string;
-    developers?: string;
-    publishers?: string;
     release_date?: string;
-    metacritic?: number;
     price?: {
       currency: string;
       initial: string;
@@ -116,12 +123,12 @@ const PublicGameCard: React.FC<{ game: Game }> = ({ game }) => {
   const displayDescription = steamData?.short_description || game.description;
 
   return (
-    <Card className="bg-white/10 backdrop-blur-md border-white/20 hover:bg-white/15 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl">
+    <Card className="bg-gradient-to-br from-blue-600 to-purple-700 border-2 border-yellow-400 hover:border-orange-400 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl shadow-lg">
       <CardContent className="p-0">
         <div className="w-full h-48 overflow-hidden rounded-t-lg relative">
           {loadingSteamData && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-10">
-              <div className="text-white text-sm">Loading Steam data...</div>
+            <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-10">
+              <div className="text-white font-bold text-sm">Loading Steam data...</div>
             </div>
           )}
           <img
@@ -136,51 +143,23 @@ const PublicGameCard: React.FC<{ game: Game }> = ({ game }) => {
         </div>
         
         <div className="p-6">
-          <h3 className="text-xl font-bold text-white mb-2">{game.title}</h3>
-          <p className="text-purple-200 text-sm mb-3">{displayGenre}</p>
+          <h3 className="text-xl font-black text-white mb-2 drop-shadow-lg">{game.title}</h3>
+          <p className="text-yellow-300 text-sm font-bold mb-3">{displayGenre}</p>
           
           {steamError && (
-            <p className="text-yellow-400 text-xs mb-2">
+            <p className="text-red-300 text-xs mb-2 font-semibold">
               ⚠️ {steamError}
             </p>
           )}
           
-          <p className="text-gray-300 text-sm leading-relaxed mb-4 line-clamp-3">
+          <p className="text-gray-100 text-sm leading-relaxed mb-4 line-clamp-3 font-medium">
             {displayDescription}
           </p>
           
-          {steamData?.developers && (
-            <p className="text-gray-400 text-xs mb-2">
-              Developer: {steamData.developers}
-            </p>
-          )}
-          
           {steamData?.release_date && (
-            <p className="text-gray-400 text-xs mb-2">
+            <p className="text-green-300 text-xs mb-4 font-semibold">
               Release Date: {steamData.release_date}
             </p>
-          )}
-          
-          {steamData?.metacritic && (
-            <p className="text-gray-400 text-xs mb-4">
-              Metacritic Score: {steamData.metacritic}/100
-            </p>
-          )}
-          
-          {game.steamUrl && (
-            <Button
-              asChild
-              className="bg-blue-600 hover:bg-blue-700 text-white w-full"
-            >
-              <a href={game.steamUrl} target="_blank" rel="noopener noreferrer">
-                <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="m7 7 10 10-5 1z"></path>
-                  <path d="m13 17 6-6"></path>
-                  <path d="m7 7 6-6"></path>
-                </svg>
-                View on Steam
-              </a>
-            </Button>
           )}
         </div>
       </CardContent>
@@ -190,6 +169,8 @@ const PublicGameCard: React.FC<{ game: Game }> = ({ game }) => {
 
 const Index = () => {
   const [games, setGames] = useState<Game[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const gamesPerPage = 9;
 
   // Fetch games from Supabase
   const { data: supabaseGames, isLoading, error } = useQuery({
@@ -256,10 +237,52 @@ const Index = () => {
     };
   }, []);
 
+  // Calculate pagination
+  const totalPages = Math.ceil(games.length / gamesPerPage);
+  const startIndex = (currentPage - 1) * gamesPerPage;
+  const endIndex = startIndex + gamesPerPage;
+  const currentGames = games.slice(startIndex, endIndex);
+
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pageNumbers = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pageNumbers.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) {
+          pageNumbers.push(i);
+        }
+        pageNumbers.push('ellipsis');
+        pageNumbers.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pageNumbers.push(1);
+        pageNumbers.push('ellipsis');
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pageNumbers.push(i);
+        }
+      } else {
+        pageNumbers.push(1);
+        pageNumbers.push('ellipsis');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+          pageNumbers.push(i);
+        }
+        pageNumbers.push('ellipsis');
+        pageNumbers.push(totalPages);
+      }
+    }
+    
+    return pageNumbers;
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 flex items-center justify-center">
-        <div className="text-white text-xl">Loading games...</div>
+        <div className="text-white text-xl font-bold">Loading games...</div>
       </div>
     );
   }
@@ -267,7 +290,7 @@ const Index = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800 flex items-center justify-center">
-        <div className="text-white text-xl">Error loading games. Please try again.</div>
+        <div className="text-white text-xl font-bold">Error loading games. Please try again.</div>
       </div>
     );
   }
@@ -276,38 +299,124 @@ const Index = () => {
     <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-indigo-800">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <div className="flex justify-end mb-4">
             <Link to="/admin">
-              <Button variant="outline" className="border-white/30 text-white hover:bg-white/10">
+              <Button variant="outline" className="border-white/30 text-white hover:bg-white/10 font-bold">
                 <Settings className="w-4 h-4 mr-2" />
                 Manage Games
               </Button>
             </Link>
           </div>
-          <h1 className="text-5xl font-bold text-white mb-4 flex items-center justify-center gap-4">
-            <div className="w-12 h-12 text-purple-200">
+          <h1 className="text-5xl font-black text-white mb-4 flex items-center justify-center gap-4 drop-shadow-2xl">
+            <div className="w-12 h-12 text-yellow-300">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
               </svg>
             </div>
             Game Wishlist
           </h1>
-          <p className="text-xl text-purple-200">Discover your next gaming adventure</p>
+          <p className="text-xl text-yellow-200 font-bold">Discover your next gaming adventure</p>
         </div>
 
+        {/* Pagination Controls - Top */}
+        {totalPages > 1 && (
+          <div className="mb-8">
+            <Pagination>
+              <PaginationContent className="bg-white/10 backdrop-blur-md rounded-lg p-2">
+                <PaginationItem>
+                  <PaginationPrevious 
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    className={`text-white font-bold ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/20'}`}
+                  />
+                </PaginationItem>
+                
+                {getPageNumbers().map((pageNum, index) => (
+                  <PaginationItem key={index}>
+                    {pageNum === 'ellipsis' ? (
+                      <PaginationEllipsis className="text-white" />
+                    ) : (
+                      <PaginationLink
+                        onClick={() => setCurrentPage(pageNum as number)}
+                        isActive={currentPage === pageNum}
+                        className={`font-bold ${
+                          currentPage === pageNum 
+                            ? 'bg-yellow-400 text-purple-800' 
+                            : 'text-white hover:bg-white/20'
+                        }`}
+                      >
+                        {pageNum}
+                      </PaginationLink>
+                    )}
+                  </PaginationItem>
+                ))}
+                
+                <PaginationItem>
+                  <PaginationNext 
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    className={`text-white font-bold ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/20'}`}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
+
         {/* Games Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {games.length > 0 ? (
-            games.map(game => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {currentGames.length > 0 ? (
+            currentGames.map(game => (
               <PublicGameCard key={game.id} game={game} />
             ))
           ) : (
-            <div className="col-span-full text-center text-white text-xl">
+            <div className="col-span-full text-center text-white text-xl font-bold">
               No games found. Add some games in Supabase to see them here!
             </div>
           )}
         </div>
+
+        {/* Pagination Controls - Bottom */}
+        {totalPages > 1 && (
+          <div className="flex justify-center">
+            <Pagination>
+              <PaginationContent className="bg-white/10 backdrop-blur-md rounded-lg p-2">
+                <PaginationItem>
+                  <PaginationPrevious 
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    className={`text-white font-bold ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/20'}`}
+                  />
+                </PaginationItem>
+                
+                {getPageNumbers().map((pageNum, index) => (
+                  <PaginationItem key={index}>
+                    {pageNum === 'ellipsis' ? (
+                      <PaginationEllipsis className="text-white" />
+                    ) : (
+                      <PaginationLink
+                        onClick={() => setCurrentPage(pageNum as number)}
+                        isActive={currentPage === pageNum}
+                        className={`font-bold ${
+                          currentPage === pageNum 
+                            ? 'bg-yellow-400 text-purple-800' 
+                            : 'text-white hover:bg-white/20'
+                        }`}
+                      >
+                        {pageNum}
+                      </PaginationLink>
+                    )}
+                  </PaginationItem>
+                ))}
+                
+                <PaginationItem>
+                  <PaginationNext 
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    className={`text-white font-bold ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/20'}`}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
       </div>
     </div>
   );
