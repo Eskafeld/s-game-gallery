@@ -1,9 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { Settings } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -15,6 +12,8 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
+import { ExternalLink } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export interface Game {
   id: string;
@@ -161,6 +160,18 @@ const PublicGameCard: React.FC<{ game: Game }> = ({ game }) => {
               Release Date: {steamData.release_date}
             </p>
           )}
+
+          {game.steamUrl && (
+            <Button
+              asChild
+              className="bg-blue-600 hover:bg-blue-700 text-white w-full mt-2"
+            >
+              <a href={game.steamUrl} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="w-4 h-4 mr-2" />
+                View on Steam
+              </a>
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -170,7 +181,7 @@ const PublicGameCard: React.FC<{ game: Game }> = ({ game }) => {
 const Index = () => {
   const [games, setGames] = useState<Game[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const gamesPerPage = 9;
+  const gamesPerPage = 10; // 5 cards per row, 2 rows = 10 games per page
 
   // Fetch games from Supabase
   const { data: supabaseGames, isLoading, error } = useQuery({
@@ -300,14 +311,6 @@ const Index = () => {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="flex justify-end mb-4">
-            <Link to="/admin">
-              <Button variant="outline" className="border-white/30 text-white hover:bg-white/10 font-bold">
-                <Settings className="w-4 h-4 mr-2" />
-                Manage Games
-              </Button>
-            </Link>
-          </div>
           <h1 className="text-5xl font-black text-white mb-4 flex items-center justify-center gap-4 drop-shadow-2xl">
             <div className="w-12 h-12 text-yellow-300">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -362,8 +365,8 @@ const Index = () => {
           </div>
         )}
 
-        {/* Games Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {/* Games Grid - 5 columns, 2 rows */}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-8">
           {currentGames.length > 0 ? (
             currentGames.map(game => (
               <PublicGameCard key={game.id} game={game} />
