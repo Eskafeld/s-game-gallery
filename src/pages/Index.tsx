@@ -49,42 +49,58 @@ const convertSupabaseToGame = (supabaseGame: any): Game => {
   };
 };
 
-// Enhanced Steam data fetching with retry logic
-const fetchSteamData = async (steamUrl: string, retryCount = 0): Promise<any> => {
-  const maxRetries = 2;
-  
-  try {
-    console.log(`Fetching Steam data for URL: ${steamUrl} (attempt ${retryCount + 1})`);
-    
-    const { data, error } = await supabase.functions.invoke('fetch-steam-data', {
-      body: { steamUrl }
-    });
+// Extract Steam app ID from Steam URL
+const extractSteamAppId = (steamUrl: string): string | null => {
+  const match = steamUrl.match(/\/app\/(\d+)/);
+  return match ? match[1] : null;
+};
 
-    if (error) {
-      console.error('Supabase function error:', error);
-      throw error;
-    }
-
-    if (!data) {
-      throw new Error('No data returned from Steam API');
-    }
-
-    console.log('Successfully fetched Steam data:', data.name);
-    return data;
-  } catch (error) {
-    console.error(`Steam API call failed (attempt ${retryCount + 1}):`, error);
-    
-    // Retry logic for transient errors
-    if (retryCount < maxRetries && error.message !== 'Invalid Steam URL format') {
-      console.log(`Retrying Steam API call for ${steamUrl} in 2 seconds...`);
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      return fetchSteamData(steamUrl, retryCount + 1);
-    }
-    
-    // Don't throw the error, return null instead to gracefully handle failures
-    console.warn(`Failed to fetch Steam data for ${steamUrl} after ${retryCount + 1} attempts`);
-    return null;
+// Client-side Steam data fetching
+const fetchSteamDataDirectly = async (steamUrl: string): Promise<any> => {
+  const appId = extractSteamAppId(steamUrl);
+  if (!appId) {
+    throw new Error('Invalid Steam URL format');
   }
+
+  console.log(`Fetching Steam data directly for app ID: ${appId}`);
+
+  // Use CORS proxy or direct Steam API call
+  const steamApiUrl = `https://store.steampowered.com/api/appdetails?appids=${appId}&cc=us&l=english&v=1`;
+  
+  const response = await fetch(steamApiUrl, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Steam API returned status ${response.status}`);
+  }
+
+  const steamData = await response.json();
+  const gameData = steamData[appId];
+  
+  if (!gameData || !gameData.success) {
+    throw new Error('Game not found or unavailable');
+  }
+
+  const game = gameData.data;
+  
+  return {
+    name: game.name || 'Unknown Game',
+    short_description: game.short_description || '',
+    detailed_description: game.detailed_description || '',
+    header_image: game.header_image || '',
+    genres: game.genres ? game.genres.map((g: any) => g.description).join(', ') : '',
+    release_date: game.release_date ? game.release_date.date : '',
+    price: game.price_overview ? {
+      currency: game.price_overview.currency,
+      initial: game.price_overview.initial_formatted,
+      final: game.price_overview.final_formatted,
+      discount_percent: game.price_overview.discount_percent
+    } : null
+  };
 };
 
 const PublicGameCard: React.FC<{ game: Game }> = ({ game }) => {
@@ -97,19 +113,14 @@ const PublicGameCard: React.FC<{ game: Game }> = ({ game }) => {
       setLoadingSteamData(true);
       setSteamError(null);
       
-      fetchSteamData(game.steamUrl)
+      fetchSteamDataDirectly(game.steamUrl)
         .then(data => {
-          if (data) {
-            setSteamData(data);
-            console.log(`Steam data loaded for ${game.title}`);
-          } else {
-            setSteamError('Unable to load Steam data');
-            console.warn(`No Steam data available for ${game.title}`);
-          }
+          setSteamData(data);
+          console.log(`Steam data loaded for ${game.title}`);
         })
         .catch(error => {
-          setSteamError('Failed to load Steam data');
-          console.error(`Steam data error for ${game.title}:`, error);
+          setSteamError('Unable to load Steam data');
+          console.warn(`Steam data error for ${game.title}:`, error);
         })
         .finally(() => {
           setLoadingSteamData(false);
