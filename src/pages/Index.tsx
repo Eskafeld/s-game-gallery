@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
@@ -55,52 +54,37 @@ const extractSteamAppId = (steamUrl: string): string | null => {
   return match ? match[1] : null;
 };
 
-// Client-side Steam data fetching
-const fetchSteamDataDirectly = async (steamUrl: string): Promise<any> => {
+// Get Steam header image URL
+const getSteamHeaderImage = (steamUrl: string): string | null => {
   const appId = extractSteamAppId(steamUrl);
-  if (!appId) {
-    throw new Error('Invalid Steam URL format');
-  }
+  if (!appId) return null;
+  return `https://cdn.akamai.steamstatic.com/steam/apps/${appId}/header.jpg`;
+};
 
-  console.log(`Fetching Steam data directly for app ID: ${appId}`);
-
-  // Use CORS proxy or direct Steam API call
-  const steamApiUrl = `https://store.steampowered.com/api/appdetails?appids=${appId}&cc=us&l=english&v=1`;
+// Try to fetch Steam data using Supabase function as fallback
+const fetchSteamDataViaFunction = async (steamUrl: string): Promise<any> => {
+  console.log(`Attempting to fetch Steam data via Supabase function for: ${steamUrl}`);
   
-  const response = await fetch(steamApiUrl, {
-    method: 'GET',
-    headers: {
-      'Accept': 'application/json',
-    },
-  });
+  try {
+    const { data, error } = await supabase.functions.invoke('fetch-steam-data', {
+      body: { steamUrl }
+    });
 
-  if (!response.ok) {
-    throw new Error(`Steam API returned status ${response.status}`);
+    if (error) {
+      console.warn('Supabase function error:', error);
+      throw error;
+    }
+
+    if (!data) {
+      throw new Error('No data returned from Steam API');
+    }
+
+    console.log('Successfully fetched Steam data via function:', data.name);
+    return data;
+  } catch (error) {
+    console.warn('Steam function fetch failed:', error);
+    throw error;
   }
-
-  const steamData = await response.json();
-  const gameData = steamData[appId];
-  
-  if (!gameData || !gameData.success) {
-    throw new Error('Game not found or unavailable');
-  }
-
-  const game = gameData.data;
-  
-  return {
-    name: game.name || 'Unknown Game',
-    short_description: game.short_description || '',
-    detailed_description: game.detailed_description || '',
-    header_image: game.header_image || '',
-    genres: game.genres ? game.genres.map((g: any) => g.description).join(', ') : '',
-    release_date: game.release_date ? game.release_date.date : '',
-    price: game.price_overview ? {
-      currency: game.price_overview.currency,
-      initial: game.price_overview.initial_formatted,
-      final: game.price_overview.final_formatted,
-      discount_percent: game.price_overview.discount_percent
-    } : null
-  };
 };
 
 const PublicGameCard: React.FC<{ game: Game }> = ({ game }) => {
@@ -113,13 +97,14 @@ const PublicGameCard: React.FC<{ game: Game }> = ({ game }) => {
       setLoadingSteamData(true);
       setSteamError(null);
       
-      fetchSteamDataDirectly(game.steamUrl)
+      // Try to fetch detailed Steam data via Supabase function
+      fetchSteamDataViaFunction(game.steamUrl)
         .then(data => {
           setSteamData(data);
           console.log(`Steam data loaded for ${game.title}`);
         })
         .catch(error => {
-          setSteamError('Unable to load Steam data');
+          setSteamError('Steam data unavailable');
           console.warn(`Steam data error for ${game.title}:`, error);
         })
         .finally(() => {
@@ -128,7 +113,9 @@ const PublicGameCard: React.FC<{ game: Game }> = ({ game }) => {
     }
   }, [game.steamUrl, steamData, loadingSteamData, game.title]);
 
-  const displayImage = steamData?.header_image || game.thumbnail;
+  // Use Steam header image if available, fallback to default thumbnail
+  const steamHeaderImage = game.steamUrl ? getSteamHeaderImage(game.steamUrl) : null;
+  const displayImage = steamData?.header_image || steamHeaderImage || game.thumbnail;
   const displayGenre = steamData?.genres || game.genre;
   const displayDescription = steamData?.short_description || game.description;
 
@@ -147,7 +134,10 @@ const PublicGameCard: React.FC<{ game: Game }> = ({ game }) => {
             className="w-full h-full object-cover"
             onError={(e) => {
               console.warn(`Image failed to load for ${game.title}, using fallback`);
-              e.currentTarget.src = game.thumbnail;
+              // If Steam header image fails, try the default thumbnail
+              if (e.currentTarget.src !== game.thumbnail) {
+                e.currentTarget.src = game.thumbnail;
+              }
             }}
           />
         </div>
