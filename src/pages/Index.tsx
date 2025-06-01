@@ -119,6 +119,12 @@ const PublicGameCard: React.FC<{ game: Game }> = ({ game }) => {
   const displayGenre = steamData?.genres || game.genre;
   const displayDescription = steamData?.short_description || game.description;
 
+  // Get Steam app ID for redirect
+  const steamAppId = game.steamUrl ? extractSteamAppId(game.steamUrl) : null;
+  const steamRedirectUrl = steamAppId 
+    ? `/go-to-steam?id=${steamAppId}&name=${encodeURIComponent(game.title)}`
+    : `/go-to-steam?name=${encodeURIComponent(game.title)}`;
+
   return (
     <Card className="bg-gradient-to-br from-blue-600 to-purple-700 border-2 border-yellow-400 hover:border-orange-400 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl shadow-lg">
       <CardContent className="p-0">
@@ -167,7 +173,7 @@ const PublicGameCard: React.FC<{ game: Game }> = ({ game }) => {
               asChild
               className="bg-blue-600 hover:bg-blue-700 text-white w-full mt-2"
             >
-              <a href={game.steamUrl} target="_blank" rel="noopener noreferrer">
+              <a href={steamRedirectUrl}>
                 <ExternalLink className="w-4 h-4 mr-2" />
                 View on Steam
               </a>
