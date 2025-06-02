@@ -126,9 +126,9 @@ const PublicGameCard: React.FC<{ game: Game }> = ({ game }) => {
     : `/go-to-steam?name=${encodeURIComponent(game.title)}`;
 
   return (
-    <Card className="bg-gradient-to-br from-blue-600 to-purple-700 border-2 border-yellow-400 hover:border-orange-400 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl shadow-lg">
-      <CardContent className="p-0">
-        <div className="w-full h-48 overflow-hidden rounded-t-lg relative">
+    <Card className="bg-gradient-to-br from-blue-600 to-purple-700 border-2 border-yellow-400 hover:border-orange-400 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl shadow-lg h-full flex flex-col">
+      <CardContent className="p-0 flex flex-col h-full">
+        <div className="w-full h-56 overflow-hidden rounded-t-lg relative flex-shrink-0">
           {loadingSteamData && (
             <div className="absolute inset-0 bg-black/70 flex items-center justify-center z-10">
               <div className="text-white font-bold text-sm">Loading Steam data...</div>
@@ -137,7 +137,7 @@ const PublicGameCard: React.FC<{ game: Game }> = ({ game }) => {
           <img
             src={displayImage}
             alt={game.title}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain bg-gray-900"
             onError={(e) => {
               console.warn(`Image failed to load for ${game.title}, using fallback`);
               // If Steam header image fails, try the default thumbnail
@@ -148,7 +148,7 @@ const PublicGameCard: React.FC<{ game: Game }> = ({ game }) => {
           />
         </div>
         
-        <div className="p-6">
+        <div className="p-6 flex flex-col flex-grow">
           <h3 className="text-xl font-black text-white mb-2 drop-shadow-lg">{game.title}</h3>
           <p className="text-yellow-300 text-sm font-bold mb-3">{displayGenre}</p>
           
@@ -158,26 +158,30 @@ const PublicGameCard: React.FC<{ game: Game }> = ({ game }) => {
             </p>
           )}
           
-          <p className="text-gray-100 text-sm leading-relaxed mb-4 line-clamp-3 font-medium">
-            {displayDescription}
-          </p>
-          
-          {steamData?.release_date && (
-            <p className="text-green-300 text-xs mb-4 font-semibold">
-              Release Date: {steamData.release_date}
+          <div className="flex-grow">
+            <p className="text-gray-100 text-sm leading-relaxed mb-4 line-clamp-3 font-medium">
+              {displayDescription}
             </p>
-          )}
+            
+            {steamData?.release_date && (
+              <p className="text-green-300 text-xs mb-4 font-semibold">
+                Release Date: {steamData.release_date}
+              </p>
+            )}
+          </div>
 
           {game.steamUrl && (
-            <Button
-              asChild
-              className="bg-blue-600 hover:bg-blue-700 text-white w-full mt-2"
-            >
-              <a href={steamRedirectUrl} target="_blank" rel="noopener noreferrer">
-                <ExternalLink className="w-4 h-4 mr-2" />
-                View on Steam
-              </a>
-            </Button>
+            <div className="mt-auto">
+              <Button
+                asChild
+                className="bg-blue-600 hover:bg-blue-700 text-white w-full"
+              >
+                <a href={steamRedirectUrl} target="_blank" rel="noopener noreferrer">
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  View on Steam
+                </a>
+              </Button>
+            </div>
           )}
         </div>
       </CardContent>
@@ -372,8 +376,8 @@ const Index = () => {
           </div>
         )}
 
-        {/* Games Grid - 5 columns, 2 rows */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6 mb-8">
+        {/* Games Grid - Updated for better layout */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8 mb-8">
           {currentGames.length > 0 ? (
             currentGames.map(game => (
               <PublicGameCard key={game.id} game={game} />
