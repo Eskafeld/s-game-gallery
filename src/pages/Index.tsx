@@ -173,7 +173,7 @@ const PublicGameCard: React.FC<{ game: Game }> = ({ game }) => {
               asChild
               className="bg-blue-600 hover:bg-blue-700 text-white w-full mt-2"
             >
-              <a href={steamRedirectUrl}>
+              <a href={steamRedirectUrl} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="w-4 h-4 mr-2" />
                 View on Steam
               </a>
