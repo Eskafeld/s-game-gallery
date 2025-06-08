@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/pagination';
 import { ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { FilterSidebar } from '@/components/FilterSidebar';
 
 export interface Game {
   id: string;
@@ -192,8 +191,6 @@ const PublicGameCard: React.FC<{ game: Game }> = ({ game }) => {
 
 const Index = () => {
   const [games, setGames] = useState<Game[]>([]);
-  const [filteredGames, setFilteredGames] = useState<Game[]>([]);
-  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const gamesPerPage = 10; // 5 cards per row, 2 rows = 10 games per page
 
@@ -262,57 +259,11 @@ const Index = () => {
     };
   }, []);
 
-  // Extract unique genres from games
-  const uniqueGenres = React.useMemo(() => {
-    const genres = new Set<string>();
-    games.forEach(game => {
-      // Split genre string by comma and trim whitespace
-      if (game.genre) {
-        game.genre.split(',').forEach(g => genres.add(g.trim()));
-      }
-    });
-    return Array.from(genres).sort();
-  }, [games]);
-
-  // Filter games based on selected genres
-  useEffect(() => {
-    if (selectedGenres.length === 0) {
-      setFilteredGames(games);
-    } else {
-      const filtered = games.filter(game => {
-        if (!game.genre) return false;
-        const gameGenres = game.genre.split(',').map(g => g.trim());
-        return selectedGenres.some(selectedGenre => 
-          gameGenres.includes(selectedGenre)
-        );
-      });
-      setFilteredGames(filtered);
-    }
-    setCurrentPage(1); // Reset to first page when filtering
-  }, [games, selectedGenres]);
-
-  // Filter handlers
-  const handleGenreChange = (genre: string, checked: boolean) => {
-    if (checked) {
-      setSelectedGenres(prev => [...prev, genre]);
-    } else {
-      setSelectedGenres(prev => prev.filter(g => g !== genre));
-    }
-  };
-
-  const handleSelectAll = () => {
-    setSelectedGenres([]);
-  };
-
-  const handleReset = () => {
-    setSelectedGenres([]);
-  };
-
-  // Calculate pagination based on filtered games
-  const totalPages = Math.ceil(filteredGames.length / gamesPerPage);
+  // Calculate pagination based on all games
+  const totalPages = Math.ceil(games.length / gamesPerPage);
   const startIndex = (currentPage - 1) * gamesPerPage;
   const endIndex = startIndex + gamesPerPage;
-  const currentGames = filteredGames.slice(startIndex, endIndex);
+  const currentGames = games.slice(startIndex, endIndex);
 
   // Generate page numbers for pagination
   const getPageNumbers = () => {
@@ -382,123 +333,104 @@ const Index = () => {
           <p className="text-xl text-yellow-200 font-bold">Discover your next gaming adventure</p>
         </div>
 
-        <div className="flex gap-6">
-          {/* Filter Sidebar */}
-          <div className="w-64 flex-shrink-0">
-            <FilterSidebar
-              genres={uniqueGenres}
-              selectedGenres={selectedGenres}
-              onGenreChange={handleGenreChange}
-              onSelectAll={handleSelectAll}
-              onReset={handleReset}
-            />
+        {/* Pagination Controls - Top */}
+        {totalPages > 1 && (
+          <div className="mb-8">
+            <Pagination>
+              <PaginationContent className="bg-white/10 backdrop-blur-md rounded-lg p-2">
+                <PaginationItem>
+                  <PaginationPrevious 
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    className={`text-white font-bold ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/20'}`}
+                  />
+                </PaginationItem>
+                
+                {getPageNumbers().map((pageNum, index) => (
+                  <PaginationItem key={index}>
+                    {pageNum === 'ellipsis' ? (
+                      <PaginationEllipsis className="text-white" />
+                    ) : (
+                      <PaginationLink
+                        onClick={() => setCurrentPage(pageNum as number)}
+                        isActive={currentPage === pageNum}
+                        className={`font-bold ${
+                          currentPage === pageNum 
+                            ? 'bg-yellow-400 text-purple-800' 
+                            : 'text-white hover:bg-white/20'
+                        }`}
+                      >
+                        {pageNum}
+                      </PaginationLink>
+                    )}
+                  </PaginationItem>
+                ))}
+                
+                <PaginationItem>
+                  <PaginationNext 
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    className={`text-white font-bold ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/20'}`}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
+        )}
 
-          {/* Main Content */}
-          <div className="flex-1">
-            {/* Pagination Controls - Top */}
-            {totalPages > 1 && (
-              <div className="mb-8">
-                <Pagination>
-                  <PaginationContent className="bg-white/10 backdrop-blur-md rounded-lg p-2">
-                    <PaginationItem>
-                      <PaginationPrevious 
-                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                        className={`text-white font-bold ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/20'}`}
-                      />
-                    </PaginationItem>
-                    
-                    {getPageNumbers().map((pageNum, index) => (
-                      <PaginationItem key={index}>
-                        {pageNum === 'ellipsis' ? (
-                          <PaginationEllipsis className="text-white" />
-                        ) : (
-                          <PaginationLink
-                            onClick={() => setCurrentPage(pageNum as number)}
-                            isActive={currentPage === pageNum}
-                            className={`font-bold ${
-                              currentPage === pageNum 
-                                ? 'bg-yellow-400 text-purple-800' 
-                                : 'text-white hover:bg-white/20'
-                            }`}
-                          >
-                            {pageNum}
-                          </PaginationLink>
-                        )}
-                      </PaginationItem>
-                    ))}
-                    
-                    <PaginationItem>
-                      <PaginationNext 
-                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                        className={`text-white font-bold ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/20'}`}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              </div>
-            )}
-
-            {/* Games Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8 mb-8">
-              {currentGames.length > 0 ? (
-                currentGames.map(game => (
-                  <PublicGameCard key={game.id} game={game} />
-                ))
-              ) : (
-                <div className="col-span-full text-center text-white text-xl font-bold">
-                  {selectedGenres.length > 0 
-                    ? `No games found for selected genres: ${selectedGenres.join(', ')}`
-                    : "No games found. Add some games in Supabase to see them here!"
-                  }
-                </div>
-              )}
+        {/* Games Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-8 mb-8">
+          {currentGames.length > 0 ? (
+            currentGames.map(game => (
+              <PublicGameCard key={game.id} game={game} />
+            ))
+          ) : (
+            <div className="col-span-full text-center text-white text-xl font-bold">
+              No games found. Add some games in Supabase to see them here!
             </div>
-
-            {/* Pagination Controls - Bottom */}
-            {totalPages > 1 && (
-              <div className="flex justify-center">
-                <Pagination>
-                  <PaginationContent className="bg-white/10 backdrop-blur-md rounded-lg p-2">
-                    <PaginationItem>
-                      <PaginationPrevious 
-                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                        className={`text-white font-bold ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/20'}`}
-                      />
-                    </PaginationItem>
-                    
-                    {getPageNumbers().map((pageNum, index) => (
-                      <PaginationItem key={index}>
-                        {pageNum === 'ellipsis' ? (
-                          <PaginationEllipsis className="text-white" />
-                        ) : (
-                          <PaginationLink
-                            onClick={() => setCurrentPage(pageNum as number)}
-                            isActive={currentPage === pageNum}
-                            className={`font-bold ${
-                              currentPage === pageNum 
-                                ? 'bg-yellow-400 text-purple-800' 
-                                : 'text-white hover:bg-white/20'
-                            }`}
-                          >
-                            {pageNum}
-                          </PaginationLink>
-                        )}
-                      </PaginationItem>
-                    ))}
-                    
-                    <PaginationItem>
-                      <PaginationNext 
-                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                        className={`text-white font-bold ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/20'}`}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              </div>
-            )}
-          </div>
+          )}
         </div>
+
+        {/* Pagination Controls - Bottom */}
+        {totalPages > 1 && (
+          <div className="flex justify-center">
+            <Pagination>
+              <PaginationContent className="bg-white/10 backdrop-blur-md rounded-lg p-2">
+                <PaginationItem>
+                  <PaginationPrevious 
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    className={`text-white font-bold ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/20'}`}
+                  />
+                </PaginationItem>
+                
+                {getPageNumbers().map((pageNum, index) => (
+                  <PaginationItem key={index}>
+                    {pageNum === 'ellipsis' ? (
+                      <PaginationEllipsis className="text-white" />
+                    ) : (
+                      <PaginationLink
+                        onClick={() => setCurrentPage(pageNum as number)}
+                        isActive={currentPage === pageNum}
+                        className={`font-bold ${
+                          currentPage === pageNum 
+                            ? 'bg-yellow-400 text-purple-800' 
+                            : 'text-white hover:bg-white/20'
+                        }`}
+                      >
+                        {pageNum}
+                      </PaginationLink>
+                    )}
+                  </PaginationItem>
+                ))}
+                
+                <PaginationItem>
+                  <PaginationNext 
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    className={`text-white font-bold ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/20'}`}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
       </div>
     </div>
   );
