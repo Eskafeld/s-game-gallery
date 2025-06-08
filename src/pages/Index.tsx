@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
@@ -41,7 +42,7 @@ const convertSupabaseToGame = (supabaseGame: any): Game => {
   return {
     id: supabaseGame.Title,
     title: supabaseGame.Title,
-    genre: 'Action, Adventure',
+    genre: supabaseGame.genre || 'Action, Adventure',
     description: `Experience ${supabaseGame.Title} - an exciting gaming adventure that will keep you engaged for hours.`,
     thumbnail: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&h=200&fit=crop',
     steamUrl: supabaseGame.Link
@@ -87,6 +88,24 @@ const fetchSteamDataViaFunction = async (steamUrl: string): Promise<any> => {
   }
 };
 
+// Update game genre in database
+const updateGameGenre = async (title: string, genre: string) => {
+  try {
+    const { error } = await supabase
+      .from('games-list')
+      .update({ genre })
+      .eq('Title', title);
+    
+    if (error) {
+      console.error('Error updating game genre:', error);
+    } else {
+      console.log(`Updated genre for ${title}: ${genre}`);
+    }
+  } catch (error) {
+    console.error('Failed to update game genre:', error);
+  }
+};
+
 const PublicGameCard: React.FC<{ game: Game }> = ({ game }) => {
   const [steamData, setSteamData] = useState(game.steamData || null);
   const [loadingSteamData, setLoadingSteamData] = useState(false);
@@ -102,6 +121,11 @@ const PublicGameCard: React.FC<{ game: Game }> = ({ game }) => {
         .then(data => {
           setSteamData(data);
           console.log(`Steam data loaded for ${game.title}`);
+          
+          // Update genre in database if we got new data
+          if (data.genres && data.genres !== game.genre) {
+            updateGameGenre(game.title, data.genres);
+          }
         })
         .catch(error => {
           setSteamError('Steam data unavailable');
@@ -111,7 +135,7 @@ const PublicGameCard: React.FC<{ game: Game }> = ({ game }) => {
           setLoadingSteamData(false);
         });
     }
-  }, [game.steamUrl, steamData, loadingSteamData, game.title]);
+  }, [game.steamUrl, steamData, loadingSteamData, game.title, game.genre]);
 
   // Use Steam header image if available, fallback to default thumbnail
   const steamHeaderImage = game.steamUrl ? getSteamHeaderImage(game.steamUrl) : null;
@@ -265,7 +289,6 @@ const Index = () => {
   const endIndex = startIndex + gamesPerPage;
   const currentGames = games.slice(startIndex, endIndex);
 
-  // Generate page numbers for pagination
   const getPageNumbers = () => {
     const pageNumbers = [];
     const maxVisiblePages = 5;

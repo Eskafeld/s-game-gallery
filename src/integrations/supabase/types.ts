@@ -11,14 +11,17 @@ export type Database = {
     Tables: {
       "games-list": {
         Row: {
+          genre: string | null
           Link: string
           Title: string
         }
         Insert: {
+          genre?: string | null
           Link: string
           Title: string
         }
         Update: {
+          genre?: string | null
           Link?: string
           Title?: string
         }
